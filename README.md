@@ -1,4 +1,4 @@
-# MowerFix AI V1.3 Beta
+# MowerFixAI
 
 Static GitHub Pages app.
 
