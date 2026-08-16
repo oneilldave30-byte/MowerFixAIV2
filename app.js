@@ -19,13 +19,71 @@ function partCard(){const ps=matchingParts();if(!ps.length)return `<div class="c
 function feedbackCard(){return `<div class="card no-print"><h3>Was this diagnosis correct?</h3><p class="muted small">Your response is stored anonymously in this browser only.</p><div class="actions"><button class="btn btn-primary" onclick="submitFeedback(true)">Yes</button><button class="btn btn-danger" onclick="showActualFault()">No — tell us the actual fault</button></div><div id="actualFaultBox"></div></div>`}
 function showActualFault(){document.getElementById('actualFaultBox').innerHTML=`<label>What was the actual fault?</label><select id="actualFaultSelect"><option value="">Choose one</option><option>Battery</option><option>Charging station / power supply</option><option>Charging contacts</option><option>Boundary wire / loop</option><option>Wheel / drive system</option><option>Blade / cutting system</option><option>Sensor</option><option>GPS / RTK / connectivity</option><option>Software / firmware</option><option>Unknown / still unresolved</option><option>Other</option></select><label>Optional detail</label><input id="actualFaultText" placeholder="e.g. broken wire 2m from station"><div class="actions"><button class="btn btn-primary" onclick="submitFeedback(false)">Save feedback</button></div>`}
 function submitFeedback(correct){const actual=correct?'Confirmed likely cause':(document.getElementById('actualFaultSelect')?.value||'Not specified');const detail=document.getElementById('actualFaultText')?.value||'';saveLocalFeedback({brand:state.brand,model:state.model,fault:state.fault,diagnosis:state.diagnosis.cause,correct,actualFault:actual,detail});const box=document.querySelector('.no-print h3');if(box)box.parentElement.innerHTML='<h3>Thanks — feedback saved</h3><p class="muted">This browser can use accumulated feedback to slightly tune confidence for repeated tests of the same mower/fault.</p>';}
-function result(){const d=state.diagnosis,w=safety(),profile=d.profile||{},fs=d.feedback||{};const local=fs.count?`<div class="card"><h3>Local test feedback</h3><p>${fs.count} previous test${fs.count===1?'':'s'} for this mower/fault in this browser; ${fs.yes} marked correct.</p><p class="small muted">Confidence is only lightly adjusted after at least 3 local tests. This is not a substitute for verified technical evidence.</p></div>`:'';shell(`<div class="card"><div class="result-title"><div><div class="tag">DIAGNOSIS</div><h2>Likely cause: ${esc(d.cause)}</h2></div><div class="confidence">${d.confidence}%</div></div><p><b>Confidence:</b> ${d.confidence}% • <b>Repair difficulty:</b> ${d.difficulty}/5 • <b>Estimated time:</b> ${esc(d.time)}</p><p class="muted">This is not a certain diagnosis. Similar symptoms can have different causes.</p></div>${local}<div class="card"><h3>Model-specific diagnostic context</h3><p><b>System:</b> ${esc(profile.system||'Model-specific system information not yet verified')}</p>${(profile.notes||[]).map(n=>`<p class="small">• ${esc(n)}</p>`).join('')}</div>${w.map(x=>`<div class="warning"><strong>Safety warning</strong><br>${esc(x)}</div>`).join('')}<div class="card"><h3>Possible alternative causes</h3><ul>${d.alternatives.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div><div class="card"><h3>Recommended tests</h3><ol>${d.tests.map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div><div class="card"><h3>Step-by-step repair guidance</h3><ol class="steps"><li>Record the exact symptom/error and mower model.</li><li>Switch off and safely isolate the mower before any inspection.</li><li>Perform the recommended checks in order, starting with simple external causes.</li><li>Confirm a model-specific part number before ordering any replacement.</li><li>Reassemble safely and test using the manufacturer's normal operating procedure.</li></ol></div>${partCard()}${feedbackCard()}<div class="card no-print"><h3>Repair report</h3><p>Print this diagnosis or save it as PDF from your browser.</p><div class="actions"><button class="btn btn-primary" onclick="window.print()">Print / Save PDF</button><button class="btn btn-secondary" onclick="selectMower()">New diagnosis</button></div></div>`)}
+function paymentgate(){const d=state.diagnosis,w=safety(),profile=d.profile||{},fs=d.feedback||{};const local=fs.count?`<div class="card"><h3>Local test feedback</h3><p>${fs.count} previous test${fs.count===1?'':'s'} for this mower/fault in this browser; ${fs.yes} marked correct.</p><p class="small muted">Confidence is only lightly adjusted after at least 3 local tests. This is not a substitute for verified technical evidence.</p></div>`:'';shell(`<div class="card"><div class="result-title"><div><div class="tag">DIAGNOSIS</div><h2>Likely cause: ${esc(d.cause)}</h2></div><div class="confidence">${d.confidence}%</div></div><p><b>Confidence:</b> ${d.confidence}% • <b>Repair difficulty:</b> ${d.difficulty}/5 • <b>Estimated time:</b> ${esc(d.time)}</p><p class="muted">This is not a certain diagnosis. Similar symptoms can have different causes.</p></div>${local}<div class="card"><h3>Model-specific diagnostic context</h3><p><b>System:</b> ${esc(profile.system||'Model-specific system information not yet verified')}</p>${(profile.notes||[]).map(n=>`<p class="small">• ${esc(n)}</p>`).join('')}</div>${w.map(x=>`<div class="warning"><strong>Safety warning</strong><br>${esc(x)}</div>`).join('')}<div class="card"><h3>Possible alternative causes</h3><ul>${d.alternatives.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div><div class="card"><h3>Recommended tests</h3><ol>${d.tests.map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div><div class="card"><h3>Step-by-step repair guidance</h3><ol class="steps"><li>Record the exact symptom/error and mower model.</li><li>Switch off and safely isolate the mower before any inspection.</li><li>Perform the recommended checks in order, starting with simple external causes.</li><li>Confirm a model-specific part number before ordering any replacement.</li><li>Reassemble safely and test using the manufacturer's normal operating procedure.</li></ol></div>${partCard()}${feedbackCard()}<div class="card no-print"><h3>Repair report</h3><p>Print this diagnosis or save it as PDF from your browser.</p><div class="actions"><button class="btn btn-primary" onclick="window.print()">Print / Save PDF</button><button class="btn btn-secondary" onclick="selectMower()">New diagnosis</button></div></div>`)}
 function errorLookup(q){q=(q||'').trim().toLowerCase();state.errorQuery=q;const m=modelInfo();const matches=ERROR_CODES.filter(e=>(!m||e.model===m.model)&&((e.code+' '+e.title+' '+e.cause).toLowerCase().includes(q)||!q));shell(`<div class="card"><div class="tag">ERROR CODE LOOKUP</div><h2>${m?esc(m.brand+' '+m.model):'All supported models'}</h2><div class="search"><input id="errorSearch" value="${esc(q)}" placeholder="Exact code or message"><button class="btn btn-secondary" onclick="errorLookup(document.getElementById('errorSearch').value)">Search</button></div>${matches.length?matches.map(e=>`<div class="verified"><span class="tag">${esc(e.code)}</span><h3>${esc(e.title)}</h3><p><b>Likely area:</b> ${esc(e.cause)}</p><p><b>Next step:</b> ${esc(e.action)}</p><p class="small"><b>Source:</b> ${esc(e.source)} • <a href="${esc(e.url)}" target="_blank" rel="noopener">Open source</a></p></div>`).join(''):'<p>No verified matching code/message found for this model. Try the exact text shown on the mower/app, or choose another model.</p>'}<div class="actions"><button class="btn btn-primary" onclick="selectMower()">Diagnose a Fault</button><button class="btn btn-secondary" onclick="home()">Home</button></div></div>`)}
 function searchSite(q){q=(q||'').trim().toLowerCase();if(!q)return;const models=MODELS.filter(m=>(m.brand+' '+m.model).toLowerCase().includes(q));const faults=FAULT_LIST.filter(f=>f.name.toLowerCase().includes(q)||f.id.includes(q));const parts=PARTS.filter(p=>p.partNumber.toLowerCase().includes(q)||p.partName.toLowerCase().includes(q));const errors=ERROR_CODES.filter(e=>(e.code+' '+e.title+' '+e.model+' '+e.cause).toLowerCase().includes(q));shell(`<div class="card"><div class="tag">SEARCH</div><h2>Search results</h2><div class="search"><input id="siteSearch" value="${esc(q)}"><button class="btn btn-secondary" onclick="searchSite(document.getElementById('siteSearch').value)">Search</button></div>${errors.length?`<h3>Error codes/messages</h3>${errors.slice(0,12).map(e=>`<div class="verified"><b>${esc(e.code)}</b> — ${esc(e.model)}<p class="small">${esc(e.cause)}<br><a href="${esc(e.url)}" target="_blank" rel="noopener">Source</a></p></div>`).join('')}`:''}${models.length?`<h3>Models</h3><ul>${models.map(m=>`<li>${esc(m.brand)} — <b>${esc(m.model)}</b></li>`).join('')}</ul>`:''}${faults.length?`<h3>Faults</h3><ul>${faults.map(f=>`<li><b>${esc(f.name)}</b></li>`).join('')}</ul>`:''}${parts.length?`<h3>Parts</h3><ul>${parts.slice(0,20).map(p=>`<li><b>${esc(p.partName)}</b> — ${esc(p.partNumber)}</li>`).join('')}</ul>`:''}${!models.length&&!faults.length&&!parts.length&&!errors.length?'<p>No matching records found.</p>':''}<div class="actions"><button class="btn btn-primary" onclick="selectMower()">Diagnose a Fault</button><button class="btn btn-secondary" onclick="home()">Home</button></div></div>`)}
 document.getElementById('homeBtn').onclick=home;home();
-const app=document.getElementById('app');
+const app=document.getElementById('app');            
 
-const STRIPE_PAYMENT_LINK='https://buy.stripe.com/fZu9AM95PeeJ6Mi2Tu28800';
+const STRIPE_PAYMENT_LINK='https://buy.stripe.com/fZu9const STRIPE_PAYMENT_LINK='https://buy.stripe.com/fZu9AM95PeeJ6Mi2Tu28800';
+
+function paymentGate(){
+
+  shell(`
+    <div class="card">
+
+      <div class="tag">DIAGNOSIS READY</div>
+
+      <h2>🔒 Your diagnosis is ready</h2>
+
+      <p>
+        MowerFix AI has completed the analysis of your
+        ${esc(state.brand)} ${esc(state.model)}.
+      </p>
+
+      <div class="card">
+
+        <h3>Unlock your full diagnosis</h3>
+
+        <p>Your €4.99 payment includes:</p>
+
+        <ul>
+          <li>Likely fault</li>
+          <li>Confidence score</li>
+          <li>Alternative possible causes</li>
+          <li>Recommended diagnostic tests</li>
+          <li>Step-by-step repair guidance</li>
+          <li>Compatible verified parts where available</li>
+        </ul>
+
+        <h2>€4.99</h2>
+
+        <button
+          class="btn btn-primary"
+          onclick="startStripePayment()"
+        >
+          Unlock Diagnosis — €4.99
+        </button>
+
+      </div>
+
+      <p class="small muted">
+        Secure payment processed by Stripe.
+      </p>
+
+    </div>
+  `);
+}
+
+function startStripePayment(){
+
+  localStorage.setItem(
+    'mowerfix_pending_diagnosis',
+    JSON.stringify(state)
+  );
+
+  window.location.href=STRIPE_PAYMENT_LINK;
+}AM95PeeJ6Mi2Tu28800';
 
 let state={
   brand:'',
